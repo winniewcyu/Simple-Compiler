@@ -10,7 +10,7 @@ class Token:
         return f"<\"{self.token_str}\", {self.token_type_num}>"
     
     def debug_str(self):
-        print(f"<\"{self.token_str}\", {self.token_type}>")
+        log_token.append(f"<\"{self.token_str}\", {self.token_type}>")
 
 # constant 
 token  = {
@@ -98,17 +98,18 @@ def retrieve_punctuation(key):
         return None
 
 if __name__ == "__main__":
-    input_string= """
-    int main() {
-        int x = 1, y = 2, z;
-        if (x <= y)
-            z = x;
-        char s1[10] = "abc";
-        for (x = 0; x < 10; x++)
-            s1[x] = s1[x] + z;
-    }
-    """
+    
+    # Read input string from a file
+    input_file = "input.txt"  # Name of the input file
 
+    try:
+        with open(input_file, "r") as file:
+            input_string = file.read()  # Read the entire content of the file into input_string
+    except FileNotFoundError:
+        print(f"Error: File '{input_file}' not found!")
+        exit()
+
+    log_token =[]
     result = []
     
     # Tokenize input
@@ -122,6 +123,8 @@ if __name__ == "__main__":
             continue
         
         # Process numbers (0-9)
+        # currently just unsigned integer instead of signed real number
+        # distinguish between number and operator is spacing
         elif char.isdigit():
             start = i
             while i < len(input_string) and input_string[i].isdigit():
@@ -133,11 +136,25 @@ if __name__ == "__main__":
         elif char == "\"":
             i += 1  # Skip opening quote
             start = i
+            value = []
             while i < len(input_string) and input_string[i] != "\"":
+                if input_string[i] == "\\":
+                    escape_char = input_string[i+1]
+                    if escape_char == ["n", "t", "'", "\"", "\\", "0"]:
+                        value.append(f"\\{escape_char}")
+                    else:
+                        value.append(f"\\")
+                        i += 1
+                else:
+                    value.append(input_string[i])
                 i += 1
-            value = input_string[start:i]
+                if i == len(input_string):  # Check for unclosed / outbound string
+                    print(f"Error: unclosed string at position {start-1}")
+                    exit()
+            
             i += 1  # Skip closing quote
-            result.append(create_string_token(value))
+            result.append(create_string_token("".join(value)))
+            # result.append(create_string_token(" ".join(value)))
         
         # Process keywords and identifiers (letters a-z, A-Z)
         elif char.isalpha():
@@ -170,7 +187,9 @@ if __name__ == "__main__":
             print(f"Unknown character: {char}")
             i += 1
 
-    # Optionally write to a file
+    # debug print
+    print(", ".join(log_token))
+    # Write result to a file
     with open("output.txt", "w") as file:
         for token in result:
-            file.write(str(token) + "\n")
+            file.write(str(token) + ", ")
