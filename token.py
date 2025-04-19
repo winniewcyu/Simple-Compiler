@@ -4,13 +4,12 @@ class Token:
         self.token_str = token_str
         self.token_type_num = token_type_num
         self.token_type = token_type
-        self.debug_str()
 
     def __str__(self):
         return f"<\"{self.token_str}\", {self.token_type_num}>"
     
     def debug_str(self):
-        log_token.append(f"<\"{self.token_str}\", {self.token_type}>")
+        return f"<\"{self.token_str}\", {self.token_type}>"
 
 # constant 
 token  = {
@@ -33,6 +32,9 @@ token  = {
     "-": 37, 
     "*": 38, 
     "/": 39,
+    "!=": 40,
+    "&&": 41,
+    "||": 42,
     # punctuation
     "{": 50,
     "}": 51, 
@@ -97,11 +99,7 @@ def retrieve_punctuation(key):
         print("Not a punctuation")
         return None
 
-if __name__ == "__main__":
-    
-    # Read input string from a file
-    input_file = "input.txt"  # Name of the input file
-
+def tokenize(input_file):
     try:
         with open(input_file, "r") as file:
             input_string = file.read()  # Read the entire content of the file into input_string
@@ -188,8 +186,10 @@ if __name__ == "__main__":
             i += 1
 
     # debug print
+    log_token = [token.debug_str() for token in result]
     print(", ".join(log_token))
     # Write result to a file
     with open("output.txt", "w") as file:
-        for token in result:
-            file.write(str(token) + ", ")
+        file.write(", ".join(str(token) for token in result))
+
+    return result 

@@ -19,3 +19,98 @@ This project is to construct compiler in any programming language without using 
 _Task:_ Break down an input source file into tokens and write the processed tokens to a file in the format  `<"token string", token type number>, ...`
 
 > _Identified Tokens Types (6):_ keywords, identifiers, operators, punctuation, integers, strings
+
+---
+
+## Part 2: Parsing
+
+Grammar Parsing algo(Recursive descent parse, LL(1) parse, LR(0)/SLR(1) parse)
+
+### START
+```
+START -> EX_DECLA | START EX_DECLA
+
+EX_DECLA -> FUNC_DEF | DECLA
+
+FUNC_DEF -> TYPE id(PARAM_LIST){BLOCK_ST}
+
+TYPE -> double | int | char
+```
+
+### PARAM_LIST
+```
+PARAM_LIST -> ɛ | PARAM | PARAM_LIST , PARAM
+
+PARAM -> TYPE id
+```
+
+### BLOCK_ST
+```
+BLOCK_ST -> STATM | BLOCK_ST STATM
+
+STATM -> DECLA | ASS_ST | IF_ST | FOR_ST | WHILE_ST | RETURN_ST
+
+RETURN_ST -> return EP;
+```
+> EP: Expressions Logical, Math
+
+### DECLA
+```
+DECLA -> TYPE VAR_LIST;
+
+VAR_LIST -> VAR | VAR_LIST , VAR
+
+VAR -> id INITIAL | id [intc]
+
+INTITIAL -> = EP | ɛ
+```
+
+### ASS_ST
+```
+ASS_ST -> id = EP;
+```
+
+### IF_ST
+```
+IF_ST -> if (LOGC_EP){BLOCK_ST} ELSE_ST
+
+ELSE_ST -> ɛ | else {BLOCK_ST}
+```
+
+### FOR_ST
+```
+FOR_ST -> for (ASS_ST LOGC_EP; ASS_ST){BLOCK_ST}
+```
+
+### WHILE_ST
+```
+WHILE_ST -> while(LOGC_EP){BLOCK_ST}
+```
+
+### EP
+```
+EP -> LOGC_EP | MATH_EP | str
+
+MATH_EP -> MATH_EP op1 TD | TD
+
+TD -> TD op2 TERM | TERM
+
+TERM -> ( MATH_EP ) | id | intc | real
+```
+> op1 = { + | - }
+
+> op2 = { * | / }
+
+### LOGC_EP
+```
+LOGC_EP -> LOGC_EP op3 LOGC_ST | ! LOGC_EP | LOGC_ST
+
+LOGC_ST -> (LOGC_EP) | MATH_EP op4 MATH_EP | LOGC_TERM op4a LOC_TERM
+
+LOGC_TERM -> id | str
+```
+> op3 = { && | || }
+
+> op4 = { < | <= | > | >= | == | != }
+
+> op4a = { == | != }
