@@ -34,7 +34,7 @@ EX_DECLA -> FUNC_DEF | DECLA
 
 FUNC_DEF -> TYPE id(PARAM_LIST){BLOCK_ST}
 
-TYPE -> double | int | char
+TYPE -> double | int | str
 ```
 
 ### PARAM_LIST

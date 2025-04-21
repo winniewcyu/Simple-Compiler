@@ -21,6 +21,8 @@ token  = {
     "if": 14, 
     "else": 15, 
     "return": 16,
+    "while": 17,
+    "double": 18,
     # operator
     "=": 30, 
     "==": 31, 
