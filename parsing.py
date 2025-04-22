@@ -118,45 +118,52 @@ class Parser:
         self.current = tmp # reset
         return False
 
-    # bool VAR_LIST()
-    # VAR_LIST -> VAR | VAR_LIST , VAR
+    # bool VAR_LIST() 
+    # VAR_LIST -> VAR VAR_LIST' # LL(1) // not sure 
+    # VAR_LIST' -> , VAR VAR_LIST' | ɛ # LL(1)
     def var_list(self):
-        tmp = self.current
         if self.var():
             print("Passed: VAR")
-            return True
-        self.current = tmp # reset
-        if self.var_list() and self.match(",") and self.var():
-            print("Passed: VAR_LIST , VAR")
-            return True
-        self.current = tmp # reset
+            while self.match(","):
+                if self.var():
+                    print("Passed: , VAR")
+                else:
+                    print(f"Failed to parse VAR_LIST: no VAR found after ',' at {self.current} position, current token: {self.peek()}")
+                    return False
+            print("Passed: VAR_LIST")
+            return True        
+        print(f"Failed to parse VAR_LIST: no VAR found at {self.current} position, current token: {self.peek()}")
         return False
 
-    # bool VAR()
-    # VAR -> id INITIAL | id [intc]
+    # bool VAR() 
+    # VAR -> id INITIAL | id [intc] # LL(2)
+    # INTITIAL -> = EP | ɛ # LL(1)
     def var(self):
-        tmp = self.current
-        if self.match("id") and self.initial():
+        if self.match("id"):
+            tmp = self.current
+            if self.match("["):
+                if self.match("intc"):
+                    if self.match("]"):
+                        print("Passed: id [intc]")
+                        return True
+                    print(f"Failed to parse VAR: no ']' found after intc at {self.current} position, current token: {self.peek()}")
+                    return False
+                print(f"Failed to parse VAR: no intc found after '[' at {self.current} position, current token: {self.peek()}")
+                return False
+            self.current = tmp
+            if self.match("="):
+                if self.ep():
+                    print("Passed: = EP")
+                    return True
+                print(f"Failed to parse VAR: no EP found after '=' at {self.current} position, current token: {self.peek()}")
+                return False
+            self.current = tmp
+            print("Passed: ɛ")
             print("Passed: id INITIAL")
             return True
-        self.current = tmp # reset
-        if self.match("id") and self.match("[") and self.match("intc") and self.match("]"):
-            print("Passed: id [intc]")
-            return True
-        self.current = tmp # reset
+        print(f"Failed to parse VAR: no id found at {self.current} position, current token: {self.peek()}")
         return False
 
-    # bool INITIAL()
-    # INTITIAL -> = EP | ɛ
-    def initial(self):
-        tmp = self.current
-        if self.match("=") and self.ep():
-            print("Passed: = EP")
-            return True
-        self.current = tmp # reset
-        print("Passed: ɛ")
-        return True
-    
     # bool PARAM_LIST()
     # PARAM_LIST -> ɛ | PARAM | PARAM_LIST , PARAM
     def param_list(self):
@@ -511,12 +518,18 @@ def transform_file(input_filename):
 
 # Example usage
 if __name__ == "__main__":
-    input_file = "test.txt"  # Replace with your actual input file name
-    tokens = transform_file(input_file)
-    parser = Parser(tokens)  # Pass the token list to the Parser
-    start_parsing = parser.start()
+    # input_file = "test.txt"  # Replace with your actual input file name
+    # tokens = transform_file(input_file)
+    # parser = Parser(tokens)  # Pass the token list to the Parser
+    # start_parsing = parser.start()
+    # if start_parsing == True:
+    #     print("Parsing successful, Accepted.")
+    # else:
+    #     print("Parsing failed, Rejected.")
+    parser = Parser([( "test1" ,0) , ("[", 56), ("test2",0)])
+    parser2 = Parser ([])
+    start_parsing = parser.var()
     if start_parsing == True:
         print("Parsing successful, Accepted.")
     else:
         print("Parsing failed, Rejected.")
-    
