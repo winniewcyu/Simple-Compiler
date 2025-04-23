@@ -41,18 +41,16 @@ class Parser:
 
     # non-terminals
     # bool START()
-    # START -> EX_DECLA | START EX_DECLA
+    # START -> EX_DECLA | EX_DECLA START
     def start(self):
-        tmp = self.current
-        if self.ex_decla():
-            print("Passed: EX_DECLA")
+        if not self.ex_decla():
+            print(f"Failed to parse START: no EX_DECLA found at {self.current} position, current token: {self.peek()}")
+            return False
+        print("Passed: EX_DECLA")
+        if self.peek() and self.start(): # ensure coming token exist, so to loop recursively
+            print("Passed: START")
             return True
-        self.current = tmp # reset
-        if self.start() and self.ex_decla():
-            print("Passed: START EX_DECLA")
-            return True
-        self.current = tmp # reset
-        return False
+        return True
         
     # bool EX_DECLA()
     # EX_DECLA -> FUNC_DEF | DECLA

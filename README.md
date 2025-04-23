@@ -28,7 +28,7 @@ Grammar Parsing algo(Recursive descent parse, LL(1) parse, LR(0)/SLR(1) parse)
 
 ### START
 ```
-START -> EX_DECLA | START EX_DECLA
+START -> EX_DECLA | EX_DECLA START
 
 EX_DECLA -> FUNC_DEF | DECLA
 
