@@ -1,6 +1,8 @@
 from token import tokenize
+from parsing import parse_file
 
 if __name__ == "__main__":
     input_file = "input.txt"
-    tokens = tokenize(input_file)
-    # parsing(tokens)
+    output_file = "output.txt"
+    tokenize(input_file, output_file)
+    parse_file(output_file)

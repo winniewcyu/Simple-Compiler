@@ -1,3 +1,5 @@
+import re # regex
+
 class Parser:
     def __init__(self, tokens):
         self.tokens = tokens
@@ -9,6 +11,7 @@ class Parser:
         return None
 
     # bool Match(TOKEN tok)
+    # check identifier and string
     def match(self, tok):
         token = self.peek()
         if not token:
@@ -16,14 +19,6 @@ class Parser:
         if tok == "id" and token[1] == 0:
             self.current += 1
             print(f"ID: {token[0]}, current: {self.current}")
-            return True
-        if tok == "int" and token[1] == 1:
-            self.current += 1
-            print(f"INT: {token[0]}, current: {self.current}")
-            return True
-        if tok == "double" and token[1] == 1:
-            self.current += 1
-            print(f"DOUBLE: {token[0]}, current: {self.current}")
             return True
         if tok == "intc" and token[1] == 1:
             self.current += 1
@@ -47,7 +42,7 @@ class Parser:
             print(f"Failed to parse START: no EX_DECLA found at {self.current} position, current token: {self.peek()}")
             return False
         print("Passed: EX_DECLA")
-        if self.peek() and self.start(): # ensure coming token exist, so to loop recursively
+        if self.peek() and self.start():
             print("Passed: START")
             return True
         return True
@@ -59,7 +54,7 @@ class Parser:
         if not token:
             print(f"Failed to parse EX_DECLA: no token found at {self.current} position")
             return False
-        if token in ["double", "int", "str"]:
+        if token[0] in ["double", "int", "str"]:
             tmp = self.current
             if self.decla():
                 print("Passed: DECLA")
@@ -92,7 +87,7 @@ class Parser:
         return False
 
     # bool TYPE()
-    # TYPE -> double | int | str # LL(1)
+    # TYPE -> double | int | char # LL(1)
     def type(self):
         token = self.peek()
         if not token:
@@ -102,8 +97,8 @@ class Parser:
             return self.match("double")
         if token[0] == "int":
             return self.match("int")
-        if token[0] == "str":
-            return self.match("str")
+        if token[0] == "char":
+            return self.match("char")
         print(f"Failed to parse TYPE: no valid token found at {self.current} position, current token: {self.peek()}")
         return False
         
@@ -212,7 +207,7 @@ class Parser:
             return False
         if token[0] in ["double", "int", "str"]:
             return self.decla()
-        if token[0] == "id":
+        if token[1] == 0:
             return self.ass_st()
         if token[0] == "if":
             return self.if_st()
@@ -264,13 +259,23 @@ class Parser:
         return True
 
     # bool FOR_ST()
-    # FOR_ST -> for (ASS_ST LOGC_EP; ASS_ST){BLOCK_ST} # LR(0) reduce
+    # FOR_ST -> for (ASS_ST LOGC_EP; AFASS_ST){BLOCK_ST} # LR(0) reduce
     def for_st(self):
-        if self.match("for") and self.match("(") and self.ass_st() and self.logc_ep() and self.match(";") and self.ass_st() and self.match(")") and self.match("{") and self.block_st() and self.match("}"):
+        if self.match("for") and self.match("(") and self.ass_st() and self.logc_ep() and self.match(";") and self.afass_st() and self.match(")") and self.match("{") and self.block_st() and self.match("}"):
             print("Passed: for (ASS_ST LOGC_EP; ASS_ST){BLOCK_ST}")
             return True
         print(f"Failed to parse FOR_ST at {self.current} position, current token: {self.peek()}")
         return False
+
+    # bool AFASS_ST()
+    # AFASS_ST -> id = EP
+    def afass_st(self):
+        if self.match("id") and self.match("=") and self.ep():
+            print("Passed: id = EP")
+            return True
+        print(f"Failed to parse AFASS_ST at {self.current} position, current token: {self.peek()}")
+        return False
+       
 
     # bool WHILE_ST()
     # WHILE_ST -> while(LOGC_EP){BLOCK_ST} # LR(0) reduce
@@ -285,47 +290,51 @@ class Parser:
     # EP -> LOGC_EP | MATH_EP | str
     def ep(self):
         tmp = self.current
-        if self.logc_ep():
-            print("Passed: LOGC_EP")
+        if self.match("str"):
+            print("Passed: str")
             return True
         self.current = tmp # reset
         if self.math_ep():
             print("Passed: MATH_EP")
             return True
         self.current = tmp # reset
-        if self.match("str"):
-            print("Passed: str")
+        if self.logc_ep():
+            print("Passed: LOGC_EP")
             return True
         self.current = tmp # reset
+        print(f"Failed to parse EP at {self.current} position, current token: {self.peek()}")
         return False
 
     # bool MATH_EP()
     # MATH_EP -> TD | TD op1 MATH_EP 
     def math_ep(self):
-        tmp = self.current
-        if self.td():
-            print("Passed: TD")
+        if not self.td():
+            print(f"Failed to parse MATH_EP at {self.current} position, current token: {self.peek()}")
+            return False
+        print("Passed: TD")
+        if self.peek()[0] in [",", ")", ";"]:
             return True
-        self.current = tmp # reset
-        if self.math_ep() and self.op1() and self.td():
-            print("Passed: MATH_EP op1 TD")
+        while self.op1():
+            if not self.td():
+                print(f"Failed to parse MATH_EP at {self.current} position, current token: {self.peek()}")
+                return False
+            print("Passed: TD op1 MATH_EP")
+        if self.peek()[0] in [",", ")", ";"]:
             return True
-        self.current = tmp # reset
-        return False
 
     # bool TD()
-    # TD -> TERM | TERM op2 TD
+    # TD ->TERM | TERM op2 TD
     def td(self):
-        tmp = self.current
-        if self.term():
-            print("Passed: TERM")
-            return True
-        self.current = tmp # reset
-        if self.td() and self.op2() and self.term():
-            print("Passed: TD op2 TERM")
-            return True
-        self.current = tmp # reset
-        return False
+        if not self.term():
+            print(f"Failed to parse TD at {self.current} position, current token: {self.peek()}")
+            return False
+        print("Passed: TERM")
+        while self.op2():
+            if not self.term():
+                print(f"Failed to parse TD at {self.current} position, current token: {self.peek()}")
+                return False
+            print("Passed: TERM op2 TD")
+        return True
 
     # bool TERM()
     # TERM -> id | intc | real | ( MATH_EP )
@@ -355,42 +364,57 @@ class Parser:
         tmp = self.current
         if self.logc_st() and self.op3() and self.logc_st():
             print("Passed: LOGC_ST op3 LOGC_ST")
-            return True
+            if self.peek()[0] in [",", ")", ";"]:
+                return True
+            else:
+                print(f"Failed to parse LOGC_EP: no after set ',' or ')' or ';' found after LOGC_ST op3 LOGC_ST at {self.current} position, current token: {self.peek()}")
+                return False
         self.current = tmp # reset
-        if self.match("!") and self.logc_ep():
-            print("Passed: ! LOGC_EP")
-            return True
+        if self.match("!"):
+            if self.logc_ep():
+                print("Passed: ! LOGC_EP")
+                return True
+            print(f"Failed to parse LOGC_EP: no LOGC_EP found after '!' at {self.current} position, current token: {self.peek()}")
+            return False
         self.current = tmp # reset
         if self.logc_st():
             print("Passed: LOGC_ST")
-            return True
+            if self.peek()[0] in [",", ")", ";"]:
+                return True
+            else:
+                print(f"Failed to parse LOGC_EP: no after set ',' or ')' or ';' found after LOGC_ST at {self.current} position, current token: {self.peek()}")
+                return False
         self.current = tmp # reset
+        print(f"Failed to parse LOGC_EP at {self.current} position, current token: {self.peek()}")
         return False
 
     # bool LOGC_ST()
-    # LOGC_ST -> (LOGC_EP) | MATH_EP op4 MATH_EP | LOGC_TERM op4a LOC_TERM
+    # LOGC_ST -> (LOGC_EP) | LOGC_TERM op4 LOGC_TERM
     def logc_st(self):
         tmp = self.current
-        if self.match("(") and self.logc_ep() and self.match(")"): # parenthesis for case of inner comparison
-            print("Passed: (LOGC_EP)")
-            return True
+        if self.match("("):
+            if self.logc_ep() and self.match(")"): # parenthesis for case of inner comparison
+                print("Passed: (LOGC_EP)")
+                return True
+            print(f"Failed to parse LOGC_ST: no LOGC_EP found after '(' at {self.current} position, current token: {self.peek()}")
+            return False
         self.current = tmp # reset
-        if self.math_ep() and self.op4() and self.math_ep(): # math comparison
-            print("Passed: MATH_EP op4 MATH_EP")
-            return True
+        if self.logc_term():
+            if self.op4() and self.logc_term(): # comparison
+                print("Passed: LOGC_TERM op4 LOGC_TERM")
+                return True
+            print(f"Failed to parse LOGC_ST: no LOGC_TERM found after op4 at {self.current} position, current token: {self.peek()}")
+            return False
         self.current = tmp # reset
-        if self.logc_term() and self.op4a() and self.logc_term(): # string comparison
-            print("Passed: LOGC_TERM op4a LOGC_TERM")
-            return True
-        self.current = tmp # reset
+        print(f"Failed to parse LOGC_ST at {self.current} position, current token: {self.peek()}")
         return False
 
     # bool LOGC_TERM()
-    # LOGC_TERM -> id | str
+    # LOGC_TERM -> TERM | str
     def logc_term(self):
         tmp = self.current
-        if self.match("id"):
-            print("Passed: id(logc_term)")
+        if self.term():
+            print("Passed: TERM(logc_term)")
             return True
         self.current = tmp # reset
         if self.match("str"):
@@ -445,52 +469,18 @@ class Parser:
     # bool OP4()
     # op4 = { < | <= | > | >= | == | != }
     def op4(self):
-        tmp = self.current
-        if self.match("<"):
-            print("Passed: <")
-            return True
-        self.current = tmp # reset
-        if self.match("<="):
-            print("Passed: <=")
-            return True
-        self.current = tmp # reset
-        if self.match(">"):
-            print("Passed: >")
-            return True
-        self.current = tmp # reset
-        if self.match(">="):
-            print("Passed: >=")
-            return True
-        self.current = tmp # reset
-        if self.match("=="):
-            print("Passed: ==")
-            return True
-        self.current = tmp # reset
-        if self.match("!="):
-            print("Passed: !=")
-            return True
-        self.current = tmp # reset
+        token = self.peek()
+        if token[0] in ["<", "<=", ">", ">=", "==", "!="]:
+            print(f"Passed: {token[0]}")
+            return self.match(token[0])
+        print(f"Failed to parse OP4: no OP4 found at {self.current} position, current token: {self.peek()}")
         return False
 
-    # bool OP4A()
-    # op4a = { == | != }
-    def op4a(self):
-        tmp = self.current
-        if self.match("=="):
-            print("Passed: ==")
-            return True
-        self.current = tmp # reset
-        if self.match("!="):
-            print("Passed: !=")
-            return True
-        self.current = tmp # reset
-        return False
-
-def transform_file(input_filename):
+def transform_file(input_file):
     try:
         with open(input_file, "r") as file:
             content = file.read()
-        content = content.replace("<", "(").replace(">", ")")
+        content = re.sub(r'<"([^"]+)",\s*(\d+)>', r'("\1", \2)', content)
         tokens = eval(f"[{content}]")
         return tokens
     except FileNotFoundError:

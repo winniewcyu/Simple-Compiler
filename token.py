@@ -1,3 +1,7 @@
+import re # regex
+
+IDENTIFIER_REGEX = re.compile(r'^[_a-zA-Z][_a-zA-Z0-9]{0,30}$')
+
 # Part 1: Lexical Analysis
 class Token:
     def __init__(self, token_str, token_type_num, token_type):
@@ -37,6 +41,7 @@ token  = {
     "!=": 40,
     "&&": 41,
     "||": 42,
+    "!": 43,
     # punctuation
     "{": 50,
     "}": 51, 
@@ -101,7 +106,7 @@ def retrieve_punctuation(key):
         print("Not a punctuation")
         return None
 
-def tokenize(input_file):
+def tokenize(input_file, output_file):
     try:
         with open(input_file, "r") as file:
             input_string = file.read()  # Read the entire content of the file into input_string
@@ -129,19 +134,28 @@ def tokenize(input_file):
             start = i
             while i < len(input_string) and input_string[i].isdigit():
                 i += 1
+            if i < len(input_string) and input_string[i].isalpha():
+                print(f"Error: unexpected character '{input_string[i]}' at position {i}")
+                exit()
             value = input_string[start:i]
             result.append(create_integer_token(value))
         
         # Process strings (enclosed in quotes)
-        elif char == "\"":
+        elif char == "\"": 
+            # if there is new line in the string, report and throw error
             i += 1  # Skip opening quote
             start = i
             value = []
             while i < len(input_string) and input_string[i] != "\"":
+                if input_string[i] == "\n": # check for new line
+                    print(f"Error: new line in string at position {start-1}")
+                    exit()
+                    
                 if input_string[i] == "\\":
                     escape_char = input_string[i+1]
-                    if escape_char == ["n", "t", "'", "\"", "\\", "0"]:
+                    if escape_char in ["n", "t", "'", "\"", "\\", "0"]:
                         value.append(f"\\{escape_char}")
+                        i += 1
                     else:
                         value.append(f"\\")
                         i += 1
@@ -159,28 +173,30 @@ def tokenize(input_file):
         # Process keywords and identifiers (letters a-z, A-Z)
         elif char.isalpha():
             start = i
-            while i < len(input_string) and (input_string[i].isalnum() or input_string[i] == "_"):
-                i += 1
+            while i < len(input_string) and input_string[i].isspace() == False:
+                i += 1 
             value = input_string[start:i]
-            if value in token and token[value] >= 10:  # Check if it's a keyword
-                result.append(retrieve_keyword(value))
-            else:  # Otherwise, it's an identifier
-                result.append(create_identifier_token(value))
+            if IDENTIFIER_REGEX.match(value):
+                if value in token and token[value] >= 10:  # Check if it's a keyword
+                    result.append(retrieve_keyword(value))
+                else:  # Otherwise, it's an identifier
+                    result.append(create_identifier_token(value))
+            else:
+                print(f"Error: invalid identifier at position {start} (dismatched regex)")
+                exit()
         
         # Process operators and punctuation
-        elif char in token:
-            if input_string[i:i+2] in token:  # Check for two-character operators
-                value = input_string[i:i+2]
+        elif i + 1 < len(input_string) and input_string[i:i+2] in token:
+            value = input_string[i:i+2]
+            if token[value] >= 30:  # Operators
                 result.append(retrieve_operator(value))
                 i += 2
-            else:
-                value = char
-                if value in token:
-                    if token[value] >= 30:  # Operators
-                        result.append(retrieve_operator(value))
-                    elif token[value] >= 50:  # Punctuation
-                        result.append(retrieve_punctuation(value))
-                i += 1
+        elif char in token:
+            if token[char] >= 30:  # Operators
+                result.append(retrieve_operator(char))
+            elif token[char] >= 50:  # Punctuation
+                result.append(retrieve_punctuation(char))
+            i += 1
         
         # Move to the next character
         else:
@@ -191,7 +207,7 @@ def tokenize(input_file):
     log_token = [token.debug_str() for token in result]
     print(", ".join(log_token))
     # Write result to a file
-    with open("output.txt", "w") as file:
+    with open(output_file, "w") as file:
         file.write(", ".join(str(token) for token in result))
 
     return result 
