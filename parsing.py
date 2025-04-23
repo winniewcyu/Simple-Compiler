@@ -55,29 +55,40 @@ class Parser:
     # bool EX_DECLA()
     # EX_DECLA -> FUNC_DEF | DECLA
     def ex_decla(self):
-        tmp = self.current
-        if self.func_def():
-            print("Passed: FUNC_DEF")
-            return True
-        self.current = tmp # reset
-        if self.decla():
-            print("Passed: DECLA")
-            return True
-        self.current = tmp # reset
+        token = self.peek()
+        if not token:
+            print(f"Failed to parse EX_DECLA: no token found at {self.current} position")
+            return False
+        if token in ["double", "int", "str"]:
+            tmp = self.current
+            if self.decla():
+                print("Passed: DECLA")
+                return True
+            self.current = tmp # reset
+            if self.func_def():
+                print("Passed: FUNC_DEF")
+                return True
+        print(f"Failed to parse EX_DECLA: no valid token found at {self.current} position, current token: {self.peek()}")
         return False
 
     # bool FUNC_DEF()
-    # FUNC_DEF -> TYPE id(PARAM_LIST){BLOCK_ST}
+    # FUNC_DEF -> TYPE id(PARAM_LIST){BLOCK_ST} | TYPE main(){BLOCK_ST}
     def func_def(self):
-        tmp = self.current
-        if self.type() and self.match("id") and self.match("(") and self.param_list() and self.match("{") and self.block_st() and self.match("}"):
-            print("Passed: TYPE id(PARAM_LIST){BLOCK_ST}")
-            return True
-        self.current = tmp # reset
-        if self.type() and self.match("main") and self.match("(") and self.match(")") and self.match("{") and self.block_st() and self.match("}"):
-            print("Passed: TYPE main(){BLOCK_ST}")
-            return True
-        self.current = tmp # reset
+        if not self.type():
+            print(f"Failed to parse FUNC_DEF: no TYPE found at {self.current} position") # checked on the parent layer but just to be sure
+            return False
+        token = self.peek()
+        if not token:
+            print(f"Failed to parse FUNC_DEF: no token found at {self.current} position")
+            return False
+        if token[0] == "id":
+            if self.match("id") and self.match("(") and self.param_list() and self.match("{") and self.block_st() and self.match("}"):
+                print("Passed: TYPE id(PARAM_LIST){BLOCK_ST}")
+                return True
+        elif token[0] == "main":
+            if self.match("main") and self.match("(") and self.match(")") and self.match("{") and self.block_st() and self.match("}"):
+                print("Passed: TYPE main(){BLOCK_ST}")
+                return True
         return False
 
     # bool TYPE()
@@ -88,13 +99,10 @@ class Parser:
             print(f"Failed to parse TYPE: no token found at {self.current} position")
             return False
         if token[0] == "double":
-            print("Passed: double")
             return self.match("double")
         if token[0] == "int":
-            print("Passed: int")
             return self.match("int")
         if token[0] == "str":
-            print("Passed: str")
             return self.match("str")
         print(f"Failed to parse TYPE: no valid token found at {self.current} position, current token: {self.peek()}")
         return False
@@ -102,11 +110,9 @@ class Parser:
     # bool DECLA()
     # DECLA -> TYPE VAR_LIST;
     def decla(self):
-        tmp = self.current
         if self.type() and self.var_list() and self.match(";"):
             print("Passed: TYPE VAR_LIST;")
             return True
-        self.current = tmp # reset
         return False
 
     # bool VAR_LIST() 
@@ -127,7 +133,7 @@ class Parser:
         return False
 
     # bool VAR() 
-    # VAR -> id INITIAL | id [intc] # LL(2)
+    # VAR -> id [intc] | id INITIAL # LL(2)
     # INTITIAL -> = EP | ɛ # LL(1)
     def var(self):
         if self.match("id"):
@@ -156,41 +162,45 @@ class Parser:
         return False
 
     # bool PARAM_LIST()
-    # PARAM_LIST -> ɛ | PARAM | PARAM_LIST , PARAM
+    # PARAM_LIST -> ɛ | PARAM | PARAM, PARAM_LIST
     def param_list(self):
-        tmp = self.current
-        if self.param():
-            print("Passed: PARAM")
+        token = self.peek()
+        if token and token[0] == ")":
+            print("Passed: ɛ (param_list)")
             return True
-        self.current = tmp # reset
-        if self.param_list() and self.match(",") and self.param():
-            print("Passed: PARAM_LIST , PARAM")
-            return True
-        self.current = tmp # reset
-        return False
+        if not self.param():
+            print(f"Failed to parse PARAM_LIST: no PARAM found at {self.current} position, current token: {self.peek()}")
+            return False
+        print("Passed: PARAM")
+        while self.match(","):
+            if not self.param():
+                print(f"Failed to parse PARAM_LIST: no PARAM found after ',' at {self.current} position, current token: {self.peek()}")
+                return False
+            print("Passed: , PARAM")
+        print("Passed: PARAM_LIST")
+        return True
     
     # bool PARAM()
     # PARAM -> TYPE id
     def param(self):
-        tmp = self.current
         if self.type() and self.match("id"):
             print("Passed: TYPE id")
             return True
-        self.current = tmp # reset
         return False
 
     # bool BLOCK_ST()
-    # BLOCK_ST -> STATM | BLOCK_ST STATM
+    # BLOCK_ST -> STATM | STATM BLOCK_ST
     def block_st(self):
-        tmp = self.current
-        if self.statm():
-            print("Passed: STATM")
+        if not self.statm():
+            print(f"Failed to parse BLOCK_ST: no STATM found at {self.current} position, current token: {self.peek()}")
+            return False    
+        print("Passed: STATM")
+        if self.peek()[0] == "}":
+            print("Passed: BLOCK_ST (after set } checking)")
             return True
-        self.current = tmp # reset
-        if self.block_st() and self.statm():
-            print("Passed: BLOCK_ST STATM")
+        if self.block_st():
+            print("Passed: BLOCK_ST")
             return True
-        self.current = tmp # reset
         return False
 
     # bool STATM()
@@ -245,13 +255,13 @@ class Parser:
     # bool ELSE_ST()
     # ELSE_ST -> ɛ | else {BLOCK_ST} # LR(0) reduce
     def else_st(self):
-        token = self.peek()
-        if not token:
-            print("Passed: ɛ(else)")
-            return True
+        tmp = self.current
         if self.match("else") and self.match("{") and self.block_st() and self.match("}"):
             print("Passed: else {BLOCK_ST}")
             return True
+        self.current = tmp
+        print("Passed: ɛ (else_st)")
+        return True
 
     # bool FOR_ST()
     # FOR_ST -> for (ASS_ST LOGC_EP; ASS_ST){BLOCK_ST} # LR(0) reduce
@@ -290,7 +300,7 @@ class Parser:
         return False
 
     # bool MATH_EP()
-    # MATH_EP -> TD | MATH_EP op1 TD 
+    # MATH_EP -> TD | TD op1 MATH_EP 
     def math_ep(self):
         tmp = self.current
         if self.td():
@@ -304,7 +314,7 @@ class Parser:
         return False
 
     # bool TD()
-    # TD ->  TERM | TD op2 TERM
+    # TD -> TERM | TERM op2 TD
     def td(self):
         tmp = self.current
         if self.term():
@@ -340,7 +350,7 @@ class Parser:
         return False
 
     # bool LOGC_EP()
-    # LOGC_EP -> LOGC_ST op3 LOGC_ST | ! LOGC_EP | LOGC_ST
+    # LOGC_EP -> LOGC_ST | LOGC_ST op3 LOGC_ST | ! LOGC_EP
     def logc_ep(self):
         tmp = self.current
         if self.logc_st() and self.op3() and self.logc_st():
@@ -480,12 +490,8 @@ def transform_file(input_filename):
     try:
         with open(input_file, "r") as file:
             content = file.read()
-
-        # Transform the token format: replace '<' with '(' and '>' with ')'
         content = content.replace("<", "(").replace(">", ")")
-
-        # Extract token tuples using eval
-        tokens = eval(f"[{content}]")  # Safely convert to a list of tuples
+        tokens = eval(f"[{content}]")
         return tokens
     except FileNotFoundError:
         print(f"Error: File '{input_file}' not found!")
@@ -494,16 +500,17 @@ def transform_file(input_filename):
         print(f"Error parsing file: {e}")
         return []
 
+def parse_file(input_file):
+    tokens = transform_file(input_file)
+    parser = Parser(tokens)  # Pass the token list to the Parser
+    start_parsing = parser.start()
+    if start_parsing == True:
+        print("Parsing successful, Accepted.")
+    else:
+        print("Parsing failed, Rejected.")
+        
 # Example usage
 if __name__ == "__main__":
-    # input_file = "test.txt"  # Replace with your actual input file name
-    # tokens = transform_file(input_file)
-    # parser = Parser(tokens)  # Pass the token list to the Parser
-    # start_parsing = parser.start()
-    # if start_parsing == True:
-    #     print("Parsing successful, Accepted.")
-    # else:
-    #     print("Parsing failed, Rejected.")
     parser = Parser([( "test1" ,0) , ("[", 56), ("test2",0)])
     parser2 = Parser ([("else", 15 ), ("{", 50), ("return", 16), ("test2", 0), (";",53), ("}",51)])
     parser3 = Parser([])

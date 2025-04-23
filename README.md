@@ -32,27 +32,26 @@ START -> EX_DECLA | EX_DECLA START
 
 EX_DECLA -> FUNC_DEF | DECLA
 
-FUNC_DEF -> TYPE id(PARAM_LIST){BLOCK_ST}
+FUNC_DEF -> TYPE id(PARAM_LIST){BLOCK_ST} | TYPE main(){BLOCK_ST}
 
 TYPE -> double | int | str
 ```
 
 ### PARAM_LIST
 ```
-PARAM_LIST -> ɛ | PARAM | PARAM_LIST , PARAM
+PARAM_LIST -> ɛ | PARAM | PARAM, PARAM_LIST
 
 PARAM -> TYPE id
 ```
 
 ### BLOCK_ST
 ```
-BLOCK_ST -> STATM | BLOCK_ST STATM
+BLOCK_ST -> STATM | STATM BLOCK_ST
 
 STATM -> DECLA | ASS_ST | IF_ST | FOR_ST | WHILE_ST | RETURN_ST
 
 RETURN_ST -> return EP;
 ```
-> EP: Expressions Logical, Math
 
 ### DECLA
 ```
@@ -60,7 +59,7 @@ DECLA -> TYPE VAR_LIST;
 
 VAR_LIST -> VAR | VAR_LIST , VAR
 
-VAR -> id INITIAL | id [intc]
+VAR -> id [intc] | id INITIAL
 
 INTITIAL -> = EP | ɛ
 ```
@@ -91,11 +90,12 @@ WHILE_ST -> while(LOGC_EP){BLOCK_ST}
 ```
 EP -> LOGC_EP | MATH_EP | str
 
-MATH_EP -> MATH_EP op1 TD | TD
+MATH_EP -> TD op1 MATH_EP | TD
 
-TD -> TD op2 TERM | TERM
+TD ->  TERM | TERM op2 TD
 
-TERM -> ( MATH_EP ) | id | intc | real
+TERM -> id | intc | real | ( MATH_EP )
+
 ```
 > op1 = { + | - }
 
