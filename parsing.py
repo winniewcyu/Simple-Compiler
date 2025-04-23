@@ -3,14 +3,6 @@ class Parser:
         self.tokens = tokens
         self.current = 0
 
-    def advance(self):
-        if self.current < len(self.tokens):
-            self.current += 1
-        return self.previous()
-
-    def previous(self):
-        return self.tokens[self.current - 1]
-
     def peek(self):
         if self.current < len(self.tokens):
             return self.tokens[self.current]
@@ -91,21 +83,22 @@ class Parser:
         return False
 
     # bool TYPE()
-    # TYPE -> double | int | str
+    # TYPE -> double | int | str # LL(1)
     def type(self):
-        tmp = self.current
-        if self.match("double"):
+        token = self.peek()
+        if not token:
+            print(f"Failed to parse TYPE: no token found at {self.current} position")
+            return False
+        if token[0] == "double":
             print("Passed: double")
-            return True
-        self.current = tmp # reset
-        if self.match("int"):
+            return self.match("double")
+        if token[0] == "int":
             print("Passed: int")
-            return True
-        self.current = tmp # reset
-        if self.match("str"):
+            return self.match("int")
+        if token[0] == "str":
             print("Passed: str")
-            return True
-        self.current = tmp # reset
+            return self.match("str")
+        print(f"Failed to parse TYPE: no valid token found at {self.current} position, current token: {self.peek()}")
         return False
         
     # bool DECLA()
@@ -119,7 +112,7 @@ class Parser:
         return False
 
     # bool VAR_LIST() 
-    # VAR_LIST -> VAR VAR_LIST' # LL(1) // not sure 
+    # VAR_LIST -> VAR VAR_LIST' # LL(1) 
     # VAR_LIST' -> , VAR VAR_LIST' | ɛ # LL(1)
     def var_list(self):
         if self.var():
@@ -203,94 +196,81 @@ class Parser:
         return False
 
     # bool STATM()
-    # STATM -> DECLA | ASS_ST | IF_ST | FOR_ST | WHILE_ST | RETURN_ST
+    # STATM -> DECLA | ASS_ST | IF_ST | FOR_ST | WHILE_ST | RETURN_ST # LR(0) shift
     def statm(self):
-        tmp = self.current
-        if self.decla():
-            print("Passed: DECLA")
-            return True
-        self.current = tmp # reset
-        if self.ass_st():
-            print("Passed: ASS_ST")
-            return True
-        self.current = tmp # reset
-        if self.if_st():
-            print("Passed: IF_ST")
-            return True
-        self.current = tmp # reset
-        if self.for_st():
-            print("Passed: FOR_ST")
-            return True
-        self.current = tmp # reset
-        if self.while_st():
-            print("Passed: WHILE_ST")
-            return True
-        self.current = tmp # reset
-        if self.return_st():
-            print("Passed: RETURN_ST")
-            return True
-        self.current = tmp # reset
+        token = self.peek()
+        if not token:
+            print(f"Failed to parse STATM: no token found at {self.current} position")
+            return False
+        if token[0] in ["double", "int", "str"]:
+            return self.decla()
+        if token[0] == "id":
+            return self.ass_st()
+        if token[0] == "if":
+            return self.if_st()
+        if token[0] == "for":
+            return self.for_st()
+        if token[0] == "while":
+            return self.while_st()
+        if token[0] == "return":
+            return self.return_st()
+        print(f"Failed to parse STATM: no valid token found at {self.current} position, current token: {self.peek()}")
         return False
 
     # bool RETURN_ST()
-    # RETURN_ST -> return EP;
+    # RETURN_ST -> return EP; # LR(0) reduce
     def return_st(self):
-        tmp = self.current
         if self.match("return") and self.ep() and self.match(";"):
             print("Passed: return EP;")
             return True
-        self.current = tmp # reset
+        print(f"Failed to parse RETURN_ST at {self.current} position, current token: {self.peek()}")
         return False
 
     # bool ASS_ST()
-    # ASS_ST -> id = EP;
+    # ASS_ST -> id = EP; # LR(0) reduce
     def ass_st(self):
-        tmp = self.current
         if self.match("id") and self.match("=") and self.ep() and self.match(";"):
             print("Passed: id = EP;")
             return True
-        self.current = tmp # reset
+        print(f"Failed to parse ASS_ST at {self.current} position, current token: {self.peek()}")
         return False
 
     # bool IF_ST()
-    # IF_ST -> if (LOGC_EP){BLOCK_ST} ELSE_ST
+    # IF_ST -> if (LOGC_EP){BLOCK_ST} ELSE_ST # LR(0) reduce
     def if_st(self):
-        tmp = self.current
         if self.match("if") and self.match("(") and self.logc_ep() and self.match(")") and self.match("{") and self.block_st() and self.match("}") and self.else_st():
             print("Passed: if (LOGC_EP){BLOCK_ST} ELSE_ST")
             return True
-        self.current = tmp # reset
+        print(f"Failed to parse IF_ST at {self.current} position, current token: {self.peek()}")
         return False
 
     # bool ELSE_ST()
-    # ELSE_ST -> ɛ | else {BLOCK_ST}
+    # ELSE_ST -> ɛ | else {BLOCK_ST} # LR(0) reduce
     def else_st(self):
-        tmp = self.current
+        token = self.peek()
+        if not token:
+            print("Passed: ɛ(else)")
+            return True
         if self.match("else") and self.match("{") and self.block_st() and self.match("}"):
             print("Passed: else {BLOCK_ST}")
             return True
-        self.current = tmp # reset
-        print("Passed: ɛ(else)")
-        return True
 
     # bool FOR_ST()
-    # FOR_ST -> for (ASS_ST LOGC_EP; ASS_ST){BLOCK_ST}
+    # FOR_ST -> for (ASS_ST LOGC_EP; ASS_ST){BLOCK_ST} # LR(0) reduce
     def for_st(self):
-        tmp = self.current
         if self.match("for") and self.match("(") and self.ass_st() and self.logc_ep() and self.match(";") and self.ass_st() and self.match(")") and self.match("{") and self.block_st() and self.match("}"):
             print("Passed: for (ASS_ST LOGC_EP; ASS_ST){BLOCK_ST}")
             return True
-        self.current = tmp # reset
+        print(f"Failed to parse FOR_ST at {self.current} position, current token: {self.peek()}")
         return False
 
     # bool WHILE_ST()
-    # WHILE_ST -> while(LOGC_EP){BLOCK_ST}
+    # WHILE_ST -> while(LOGC_EP){BLOCK_ST} # LR(0) reduce
     def while_st(self):
-        tmp = self.current
         if self.match("while") and self.match("(") and self.logc_ep() and self.match(")") and self.match("{") and self.block_st() and self.match("}"):
             print("Passed: while(LOGC_EP){BLOCK_ST}")
             return True
-        self.current = tmp # reset
+        print(f"Failed to parse WHILE_ST at {self.current} position, current token: {self.peek()}")
         return False
 
     # bool EP()
@@ -527,8 +507,9 @@ if __name__ == "__main__":
     # else:
     #     print("Parsing failed, Rejected.")
     parser = Parser([( "test1" ,0) , ("[", 56), ("test2",0)])
-    parser2 = Parser ([])
-    start_parsing = parser.var()
+    parser2 = Parser ([("else", 15 ), ("{", 50), ("return", 16), ("test2", 0), (";",53), ("}",51)])
+    parser3 = Parser([])
+    start_parsing = parser3.else_st()
     if start_parsing == True:
         print("Parsing successful, Accepted.")
     else:
