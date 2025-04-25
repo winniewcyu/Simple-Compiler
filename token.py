@@ -182,7 +182,7 @@ def tokenize(input_file, output_file):
                 else:  # Otherwise, it's an identifier
                     result.append(create_identifier_token(value))
             else:
-                print(f"Error: invalid identifier at position {start} (dismatched regex)")
+                print(f"Error: invalid identifier at position {start} (dismatched regex), value: {value}")
                 exit()
         
         # Process operators and punctuation
@@ -192,10 +192,10 @@ def tokenize(input_file, output_file):
                 result.append(retrieve_operator(value))
                 i += 2
         elif char in token:
-            if token[char] >= 30:  # Operators
-                result.append(retrieve_operator(char))
-            elif token[char] >= 50:  # Punctuation
+            if token[char] >= 50:  # Punctuation
                 result.append(retrieve_punctuation(char))
+            elif token[char] >= 30:  # Operators
+                result.append(retrieve_operator(char))
             i += 1
         
         # Move to the next character

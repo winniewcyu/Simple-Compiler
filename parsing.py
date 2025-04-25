@@ -10,11 +10,13 @@ class Parser:
             return self.tokens[self.current]
         return None
 
-    # bool Match(TOKEN tok)
+    # bool Match(TOKEN tok) 
     # check identifier and string
+    # LL(1)
     def match(self, tok):
         token = self.peek()
         if not token:
+            print(f"Failed to parse {tok}: no token found at {self.current} position")
             return False
         if tok == "id" and token[1] == 0:
             self.current += 1
@@ -32,14 +34,16 @@ class Parser:
             self.current += 1
             print(f"TOKEN: {token[0]}, current: {self.current}")
             return True
+        print(f"Failed to parse {tok}: no valid token found at {self.current} position")
         return False
 
     # non-terminals
     # bool START()
     # START -> EX_DECLA | EX_DECLA START
+    # Recursive Descent
     def start(self):
         if not self.ex_decla():
-            print(f"Failed to parse START: no EX_DECLA found at {self.current} position, current token: {self.peek()}")
+            print(f"Failed to parse START: no EX_DECLA found at {self.current} position")
             return False
         print("Passed: EX_DECLA")
         if self.peek() and self.start():
@@ -49,12 +53,13 @@ class Parser:
         
     # bool EX_DECLA()
     # EX_DECLA -> FUNC_DEF | DECLA
+    # Recursive Descent
     def ex_decla(self):
         token = self.peek()
         if not token:
             print(f"Failed to parse EX_DECLA: no token found at {self.current} position")
             return False
-        if token[0] in ["double", "int", "str"]:
+        if token[0] in ["double", "int", "char"]:
             tmp = self.current
             if self.decla():
                 print("Passed: DECLA")
@@ -63,31 +68,35 @@ class Parser:
             if self.func_def():
                 print("Passed: FUNC_DEF")
                 return True
-        print(f"Failed to parse EX_DECLA: no valid token found at {self.current} position, current token: {self.peek()}")
+        print(f"Failed to parse EX_DECLA: no valid token found at {self.current} position")
         return False
 
     # bool FUNC_DEF()
     # FUNC_DEF -> TYPE id(PARAM_LIST){BLOCK_ST} | TYPE main(){BLOCK_ST}
+    # LL(1)
     def func_def(self):
         if not self.type():
             print(f"Failed to parse FUNC_DEF: no TYPE found at {self.current} position") # checked on the parent layer but just to be sure
             return False
+        print("Passed: TYPE")
         token = self.peek()
         if not token:
             print(f"Failed to parse FUNC_DEF: no token found at {self.current} position")
             return False
-        if token[0] == "id":
-            if self.match("id") and self.match("(") and self.param_list() and self.match("{") and self.block_st() and self.match("}"):
-                print("Passed: TYPE id(PARAM_LIST){BLOCK_ST}")
-                return True
-        elif token[0] == "main":
+        print(f"debug func_def: {token[0]}")
+        if token[0] == "main":
             if self.match("main") and self.match("(") and self.match(")") and self.match("{") and self.block_st() and self.match("}"):
                 print("Passed: TYPE main(){BLOCK_ST}")
                 return True
+        elif self.match("id") and self.match("(") and self.param_list() and self.match(")") and self.match("{") and self.block_st() and self.match("}"):
+            print("Passed: TYPE id(PARAM_LIST){BLOCK_ST}")
+            return True
+        print(f"Failed to parse FUNC_DEF: no valid token found at {self.current} position")
         return False
 
     # bool TYPE()
-    # TYPE -> double | int | char # LL(1)
+    # TYPE -> double | int | char 
+    # LL(1) / LR(0) reduce
     def type(self):
         token = self.peek()
         if not token:
@@ -99,11 +108,12 @@ class Parser:
             return self.match("int")
         if token[0] == "char":
             return self.match("char")
-        print(f"Failed to parse TYPE: no valid token found at {self.current} position, current token: {self.peek()}")
+        print(f"Failed to parse TYPE: no valid token found at {self.current} position")
         return False
         
     # bool DECLA()
     # DECLA -> TYPE VAR_LIST;
+    # Recursive Descent
     def decla(self):
         if self.type() and self.var_list() and self.match(";"):
             print("Passed: TYPE VAR_LIST;")
@@ -111,8 +121,9 @@ class Parser:
         return False
 
     # bool VAR_LIST() 
-    # VAR_LIST -> VAR VAR_LIST' # LL(1) 
-    # VAR_LIST' -> , VAR VAR_LIST' | ɛ # LL(1)
+    # VAR_LIST -> VAR VAR_LIST'
+    # VAR_LIST' -> , VAR VAR_LIST' | ɛ 
+    # Recursive Descent
     def var_list(self):
         if self.var():
             print("Passed: VAR")
@@ -120,16 +131,17 @@ class Parser:
                 if self.var():
                     print("Passed: , VAR")
                 else:
-                    print(f"Failed to parse VAR_LIST: no VAR found after ',' at {self.current} position, current token: {self.peek()}")
+                    print(f"Failed to parse VAR_LIST: no VAR found after ',' at {self.current} position")
                     return False
             print("Passed: VAR_LIST")
             return True        
-        print(f"Failed to parse VAR_LIST: no VAR found at {self.current} position, current token: {self.peek()}")
+        print(f"Failed to parse VAR_LIST: no VAR found at {self.current} position")
         return False
 
     # bool VAR() 
-    # VAR -> id [intc] | id INITIAL # LL(2)
-    # INTITIAL -> = EP | ɛ # LL(1)
+    # VAR -> id [intc] | id INITIAL 
+    # INTITIAL -> = EP | ɛ 
+    # Recursive Descent
     def var(self):
         if self.match("id"):
             tmp = self.current
@@ -138,38 +150,39 @@ class Parser:
                     if self.match("]"):
                         print("Passed: id [intc]")
                         return True
-                    print(f"Failed to parse VAR: no ']' found after intc at {self.current} position, current token: {self.peek()}")
+                    print(f"Failed to parse VAR: no ']' found after intc at {self.current} position")
                     return False
-                print(f"Failed to parse VAR: no intc found after '[' at {self.current} position, current token: {self.peek()}")
+                print(f"Failed to parse VAR: no intc found after '[' at {self.current} position")
                 return False
             self.current = tmp
             if self.match("="):
                 if self.ep():
                     print("Passed: = EP")
                     return True
-                print(f"Failed to parse VAR: no EP found after '=' at {self.current} position, current token: {self.peek()}")
+                print(f"Failed to parse VAR: no EP found after '=' at {self.current} position")
                 return False
             self.current = tmp
             print("Passed: ɛ")
             print("Passed: id INITIAL")
             return True
-        print(f"Failed to parse VAR: no id found at {self.current} position, current token: {self.peek()}")
+        print(f"Failed to parse VAR: no id found at {self.current} position")
         return False
 
     # bool PARAM_LIST()
     # PARAM_LIST -> ɛ | PARAM | PARAM, PARAM_LIST
+    # Recursive Descent
     def param_list(self):
         token = self.peek()
         if token and token[0] == ")":
             print("Passed: ɛ (param_list)")
             return True
         if not self.param():
-            print(f"Failed to parse PARAM_LIST: no PARAM found at {self.current} position, current token: {self.peek()}")
+            print(f"Failed to parse PARAM_LIST: no PARAM found at {self.current} position")
             return False
         print("Passed: PARAM")
         while self.match(","):
             if not self.param():
-                print(f"Failed to parse PARAM_LIST: no PARAM found after ',' at {self.current} position, current token: {self.peek()}")
+                print(f"Failed to parse PARAM_LIST: no PARAM found after ',' at {self.current} position")
                 return False
             print("Passed: , PARAM")
         print("Passed: PARAM_LIST")
@@ -177,17 +190,21 @@ class Parser:
     
     # bool PARAM()
     # PARAM -> TYPE id
+    # LR(0) shift
     def param(self):
-        if self.type() and self.match("id"):
-            print("Passed: TYPE id")
-            return True
+        if self.type():
+            print("Passed: TYPE, Shift: TYPE")
+            if self.match("id"):
+                print("Passed: TYPE id, Shift: id")
+                return True
         return False
 
     # bool BLOCK_ST()
     # BLOCK_ST -> STATM | STATM BLOCK_ST
+    # Recursive Descent
     def block_st(self):
         if not self.statm():
-            print(f"Failed to parse BLOCK_ST: no STATM found at {self.current} position, current token: {self.peek()}")
+            print(f"Failed to parse BLOCK_ST: no STATM found at {self.current} position")
             return False    
         print("Passed: STATM")
         if self.peek()[0] == "}":
@@ -199,7 +216,8 @@ class Parser:
         return False
 
     # bool STATM()
-    # STATM -> DECLA | ASS_ST | IF_ST | FOR_ST | WHILE_ST | RETURN_ST # LR(0) shift
+    # STATM -> DECLA | ASS_ST | IF_ST | FOR_ST | WHILE_ST | RETURN_ST 
+    # LR(0) shift
     def statm(self):
         token = self.peek()
         if not token:
@@ -217,38 +235,42 @@ class Parser:
             return self.while_st()
         if token[0] == "return":
             return self.return_st()
-        print(f"Failed to parse STATM: no valid token found at {self.current} position, current token: {self.peek()}")
+        print(f"Failed to parse STATM: no valid token found at {self.current} position")
         return False
 
     # bool RETURN_ST()
-    # RETURN_ST -> return EP; # LR(0) reduce
+    # RETURN_ST -> return EP; 
+    # recursive descent
     def return_st(self):
         if self.match("return") and self.ep() and self.match(";"):
             print("Passed: return EP;")
             return True
-        print(f"Failed to parse RETURN_ST at {self.current} position, current token: {self.peek()}")
+        print(f"Failed to parse RETURN_ST at {self.current} position")
         return False
 
     # bool ASS_ST()
-    # ASS_ST -> id = EP; # LR(0) reduce
+    # ASS_ST -> id = EP; 
+    # recursive descent
     def ass_st(self):
         if self.match("id") and self.match("=") and self.ep() and self.match(";"):
             print("Passed: id = EP;")
             return True
-        print(f"Failed to parse ASS_ST at {self.current} position, current token: {self.peek()}")
+        print(f"Failed to parse ASS_ST at {self.current} position")
         return False
 
     # bool IF_ST()
-    # IF_ST -> if (LOGC_EP){BLOCK_ST} ELSE_ST # LR(0) reduce
+    # IF_ST -> if (LOGC_EP){BLOCK_ST} ELSE_ST 
+    # recursive descent
     def if_st(self):
         if self.match("if") and self.match("(") and self.logc_ep() and self.match(")") and self.match("{") and self.block_st() and self.match("}") and self.else_st():
             print("Passed: if (LOGC_EP){BLOCK_ST} ELSE_ST")
             return True
-        print(f"Failed to parse IF_ST at {self.current} position, current token: {self.peek()}")
+        print(f"Failed to parse IF_ST at {self.current} position")
         return False
 
     # bool ELSE_ST()
-    # ELSE_ST -> ɛ | else {BLOCK_ST} # LR(0) reduce
+    # ELSE_ST -> ɛ | else {BLOCK_ST} 
+    # recursive descent
     def else_st(self):
         tmp = self.current
         if self.match("else") and self.match("{") and self.block_st() and self.match("}"):
@@ -259,35 +281,39 @@ class Parser:
         return True
 
     # bool FOR_ST()
-    # FOR_ST -> for (ASS_ST LOGC_EP; AFASS_ST){BLOCK_ST} # LR(0) reduce
+    # FOR_ST -> for (ASS_ST LOGC_EP; AFASS_ST){BLOCK_ST} 
+    # recursive descent
     def for_st(self):
         if self.match("for") and self.match("(") and self.ass_st() and self.logc_ep() and self.match(";") and self.afass_st() and self.match(")") and self.match("{") and self.block_st() and self.match("}"):
             print("Passed: for (ASS_ST LOGC_EP; ASS_ST){BLOCK_ST}")
             return True
-        print(f"Failed to parse FOR_ST at {self.current} position, current token: {self.peek()}")
+        print(f"Failed to parse FOR_ST at {self.current} position")
         return False
 
     # bool AFASS_ST()
     # AFASS_ST -> id = EP
+    # recursive descent
     def afass_st(self):
         if self.match("id") and self.match("=") and self.ep():
             print("Passed: id = EP")
             return True
-        print(f"Failed to parse AFASS_ST at {self.current} position, current token: {self.peek()}")
+        print(f"Failed to parse AFASS_ST at {self.current} position")
         return False
        
 
     # bool WHILE_ST()
-    # WHILE_ST -> while(LOGC_EP){BLOCK_ST} # LR(0) reduce
+    # WHILE_ST -> while(LOGC_EP){BLOCK_ST} 
+    # recursive descent
     def while_st(self):
         if self.match("while") and self.match("(") and self.logc_ep() and self.match(")") and self.match("{") and self.block_st() and self.match("}"):
             print("Passed: while(LOGC_EP){BLOCK_ST}")
             return True
-        print(f"Failed to parse WHILE_ST at {self.current} position, current token: {self.peek()}")
+        print(f"Failed to parse WHILE_ST at {self.current} position")
         return False
 
     # bool EP()
     # EP -> LOGC_EP | MATH_EP | str
+    # recursive descent
     def ep(self):
         tmp = self.current
         if self.match("str"):
@@ -302,42 +328,45 @@ class Parser:
             print("Passed: LOGC_EP")
             return True
         self.current = tmp # reset
-        print(f"Failed to parse EP at {self.current} position, current token: {self.peek()}")
+        print(f"Failed to parse EP at {self.current} position")
         return False
 
     # bool MATH_EP()
     # MATH_EP -> TD | TD op1 MATH_EP 
+    # recursive descent
     def math_ep(self):
         if not self.td():
-            print(f"Failed to parse MATH_EP at {self.current} position, current token: {self.peek()}")
+            print(f"Failed to parse MATH_EP at {self.current} position")
             return False
         print("Passed: TD")
-        if self.peek()[0] in [",", ")", ";"]:
+        if self.peek() and self.peek()[0] in [",", ")", ";"]:
             return True
         while self.op1():
             if not self.td():
-                print(f"Failed to parse MATH_EP at {self.current} position, current token: {self.peek()}")
+                print(f"Failed to parse MATH_EP at {self.current} position")
                 return False
             print("Passed: TD op1 MATH_EP")
-        if self.peek()[0] in [",", ")", ";"]:
+        if self.peek() and self.peek()[0] in [",", ")", ";"]:
             return True
 
     # bool TD()
     # TD ->TERM | TERM op2 TD
+    # recursive descent
     def td(self):
         if not self.term():
-            print(f"Failed to parse TD at {self.current} position, current token: {self.peek()}")
+            print(f"Failed to parse TD at {self.current} position")
             return False
         print("Passed: TERM")
         while self.op2():
             if not self.term():
-                print(f"Failed to parse TD at {self.current} position, current token: {self.peek()}")
+                print(f"Failed to parse TD at {self.current} position")
                 return False
             print("Passed: TERM op2 TD")
         return True
 
     # bool TERM()
     # TERM -> id | intc | real | ( MATH_EP )
+    # recursive descent
     def term(self):
         tmp = self.current
         if self.match("id"):
@@ -360,57 +389,60 @@ class Parser:
 
     # bool LOGC_EP()
     # LOGC_EP -> LOGC_ST | LOGC_ST op3 LOGC_ST | ! LOGC_EP
+    # recursive descent
     def logc_ep(self):
         tmp = self.current
         if self.logc_st() and self.op3() and self.logc_st():
             print("Passed: LOGC_ST op3 LOGC_ST")
-            if self.peek()[0] in [",", ")", ";"]:
+            if self.peek() and self.peek()[0] in [",", ")", ";"]:
                 return True
             else:
-                print(f"Failed to parse LOGC_EP: no after set ',' or ')' or ';' found after LOGC_ST op3 LOGC_ST at {self.current} position, current token: {self.peek()}")
+                print(f"Failed to parse LOGC_EP: no after set ',' or ')' or ';' found after LOGC_ST op3 LOGC_ST at {self.current} position")
                 return False
         self.current = tmp # reset
         if self.match("!"):
             if self.logc_ep():
                 print("Passed: ! LOGC_EP")
                 return True
-            print(f"Failed to parse LOGC_EP: no LOGC_EP found after '!' at {self.current} position, current token: {self.peek()}")
+            print(f"Failed to parse LOGC_EP: no LOGC_EP found after '!' at {self.current} position")
             return False
         self.current = tmp # reset
         if self.logc_st():
             print("Passed: LOGC_ST")
-            if self.peek()[0] in [",", ")", ";"]:
+            if self.peek() and self.peek()[0] in [",", ")", ";"]:
                 return True
             else:
-                print(f"Failed to parse LOGC_EP: no after set ',' or ')' or ';' found after LOGC_ST at {self.current} position, current token: {self.peek()}")
+                print(f"Failed to parse LOGC_EP: no after set ',' or ')' or ';' found after LOGC_ST at {self.current} position")
                 return False
         self.current = tmp # reset
-        print(f"Failed to parse LOGC_EP at {self.current} position, current token: {self.peek()}")
+        print(f"Failed to parse LOGC_EP at {self.current} position")
         return False
 
     # bool LOGC_ST()
     # LOGC_ST -> (LOGC_EP) | LOGC_TERM op4 LOGC_TERM
+    # recursive descent
     def logc_st(self):
         tmp = self.current
         if self.match("("):
             if self.logc_ep() and self.match(")"): # parenthesis for case of inner comparison
                 print("Passed: (LOGC_EP)")
                 return True
-            print(f"Failed to parse LOGC_ST: no LOGC_EP found after '(' at {self.current} position, current token: {self.peek()}")
+            print(f"Failed to parse LOGC_ST: no LOGC_EP found after '(' at {self.current} position")
             return False
         self.current = tmp # reset
         if self.logc_term():
             if self.op4() and self.logc_term(): # comparison
                 print("Passed: LOGC_TERM op4 LOGC_TERM")
                 return True
-            print(f"Failed to parse LOGC_ST: no LOGC_TERM found after op4 at {self.current} position, current token: {self.peek()}")
+            print(f"Failed to parse LOGC_ST: no LOGC_TERM found after op4 at {self.current} position")
             return False
         self.current = tmp # reset
-        print(f"Failed to parse LOGC_ST at {self.current} position, current token: {self.peek()}")
+        print(f"Failed to parse LOGC_ST at {self.current} position")
         return False
 
     # bool LOGC_TERM()
     # LOGC_TERM -> TERM | str
+    # recursive descent
     def logc_term(self):
         tmp = self.current
         if self.term():
@@ -426,6 +458,7 @@ class Parser:
     # terminals
     # bool OP1()
     # op1 = { + | - }
+    # recursive descent
     def op1(self):
         tmp = self.current
         if self.match("+"):
@@ -440,6 +473,7 @@ class Parser:
         
     # bool OP2()
     # op2 = { * | / }
+    # recursive descent
     def op2(self):
         tmp = self.current
         if self.match("*"):
@@ -454,6 +488,7 @@ class Parser:
 
     # bool OP3()
     # op3 = { && | || }
+    # recursive descent
     def op3(self):
         tmp = self.current
         if self.match("&&"):
@@ -468,12 +503,13 @@ class Parser:
 
     # bool OP4()
     # op4 = { < | <= | > | >= | == | != }
+    # recursive descent
     def op4(self):
         token = self.peek()
-        if token[0] in ["<", "<=", ">", ">=", "==", "!="]:
+        if token and token[0] in ["<", "<=", ">", ">=", "==", "!="]:
             print(f"Passed: {token[0]}")
             return self.match(token[0])
-        print(f"Failed to parse OP4: no OP4 found at {self.current} position, current token: {self.peek()}")
+        print(f"Failed to parse OP4: no OP4 found at {self.current} position")
         return False
 
 def transform_file(input_file):
@@ -494,17 +530,6 @@ def parse_file(input_file):
     tokens = transform_file(input_file)
     parser = Parser(tokens)  # Pass the token list to the Parser
     start_parsing = parser.start()
-    if start_parsing == True:
-        print("Parsing successful, Accepted.")
-    else:
-        print("Parsing failed, Rejected.")
-        
-# Example usage
-if __name__ == "__main__":
-    parser = Parser([( "test1" ,0) , ("[", 56), ("test2",0)])
-    parser2 = Parser ([("else", 15 ), ("{", 50), ("return", 16), ("test2", 0), (";",53), ("}",51)])
-    parser3 = Parser([])
-    start_parsing = parser3.else_st()
     if start_parsing == True:
         print("Parsing successful, Accepted.")
     else:
