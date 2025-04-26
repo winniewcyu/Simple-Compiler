@@ -8,9 +8,9 @@ This project is to construct compiler in any programming language without using 
 
 | Part | Version | Info |
 |  ----  | ----  | ---- |
-| [Part 1: Lexical Analysis](##Part1:LexicalAnalysis) | 1.1 | fulfilling basic token identification, not yet handling real number and signed number(TODO) |
-| Part 2: Parsing | 1.0 | can solve it more elegantly with checking everytime whether next token exists or not |
-| Part 3: Semantic Analysis | - | - |
+| [Part 1: Lexical Analysis](#part-1-lexical-analysis) | 1.1 | fulfilling basic token identification, not yet handling real number and signed number(TODO) |
+| [Part 2: Parsing](#part-2-parsing) | 1.0 | can solve it more elegantly with checking everytime whether next token exists or not |
+| [Part 3: Semantic Analysis](#part-3-semantic-analysis) | - | - |
 
 ---
 
@@ -129,7 +129,7 @@ double z ;
 char s1 [10] = "hello";
 
 ```
-tested Grammar: (DECLA)[###DECLA]
+tested Grammar:[DECLA](#decla)
 
 ### Case 2:
 
@@ -140,7 +140,7 @@ int main () {
     return a ;
 }
 ```
-tested Grammar: (FUNC_DEF)[###START], (BLOCK_ST)[###BLOCK_ST]
+tested Grammar: [FUNC_DEF](#start), [BLOCK_ST](#block_st)
 
 ### Case 3:
 
@@ -152,7 +152,7 @@ double addsum ( double var1 , double var 2 ){
    return ( var1 + var2 );
 }
 ```
-tested Grammar: (EP)[###EP], (PARAM_LIST)[###PARAM_LIST], (BLOCK_ST)[###BLOCK_ST]
+tested Grammar: [EP](#ep), [PARAM_LIST](#param_list), [BLOCK_ST](#block_st)
 
 ### Case 4:
 
@@ -164,7 +164,7 @@ int main () {
     }
 }
 ```
-tested Grammar: (ASS_ST)[###ASS_ST],(LOGC_EP)[###LOGC_EP],(FOR_ST)[###FOR_ST]
+tested Grammar: [ASS_ST](#ass_st),[LOGC_EP](#logc_ep),[FOR_ST](#for_st)
 
 ### Case 5:
 
@@ -176,7 +176,7 @@ int main () {
     }
 }
 ```
-tested Grammar: (ASS_ST)[###ASS_ST],(LOGC_EP)[###LOGC_EP],(WHILE_ST)[###WHILE_ST]
+tested Grammar: [ASS_ST](#ass_st),[LOGC_EP](#logc_ep),[WHILE_ST](#while_st)
 
 ### Case 6:
 
@@ -195,7 +195,7 @@ int func ( int a , int b ) {
     }
 }
 ```
-tested Grammar: (IF_ST)[###IF_ST] , (START)[###START]
+tested Grammar: [IF_ST](#if_st) , [START](#start)
 
 ### Rejected Grammar
 
@@ -439,3 +439,7 @@ Failed to parse EX_DECLA: no valid token found at 14 position
 Failed to parse START: no EX_DECLA found at 14 position
 Parsing failed, Rejected.
 ```
+
+---
+
+## Part 3: Semantic Analysis
