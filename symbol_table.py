@@ -1,5 +1,3 @@
-import sortedcontainers
-
 class SymbolTableNode:
     def __init__(self, name, type_, type_pointer, scope, size):
         self.name = name
@@ -23,7 +21,7 @@ class ArraryTableNode:
     def __init__(self, type_, type_pointer, length, size):
         self.type = type_
         self.type_pointer = type_pointer
-        self.length = scope
+        self.length = length
         self.size = size
         self.left = None
         self.right = None
@@ -54,6 +52,21 @@ class SymbolTable:
         self.array_table = None
         self.function_table = None
         self.function_symbol_table = None
+
+    def calculate_size(self, type_ , length):
+        if length > 0:
+            if type_ == "int":
+                return length * 4
+            elif type_ == "double":
+                return length * 8
+            elif type_ == "char":
+                return length
+            else:
+                print("Invalid type")
+                return None
+        else:
+            print("Invalid length")
+            return None
 
     def insert(self, name, type_, type_pointer, scope, size):
         new_node = SymbolTableNode(name, type_, type_pointer, scope, size)
@@ -129,53 +142,28 @@ class SymbolTable:
             current = current.left if name < current.name else current.right
         return None
     
-    def inorder_traversal(self, node=None):
-        if node is None:
-            node = self.root
-        if node:
-            self.inorder_traversal(node.left)
-            print(f"Name: {node.name}, Type: {node.type}, Scope: {node.scope}, Size: {node.size}")
-            self.inorder_traversal(node.right)
-       
-    def type_pointer_inorder_traversal(self, node=None):
-        if node is None:
-            node = self.type_table
-        if node:
-            self.type_pointer_inorder_traversal(node.left)
-            print(f"Name: {node.name}, Type: {node.type}, Offset: {node.offset}")
-            self.type_pointer_inorder_traversal(node.right)
-
-    def array_inorder_traversal(self, node=None):
-        if node is None:
-            node = self.array_table
-        if node:
-            self.array_inorder_traversal(node.left)
-            print(f"Type: {node.type}, Length: {node.length}, Size: {node.size}")
-            self.array_inorder_traversal(node.right)
-         
-    def function_inorder_traversal(self, node=None):
-        if node is None:
-            node = self.function_symbol_table
-        if node:
-            self.function_inorder_traversal(node.left)
-            print(f"Name: {node.name}, Type: {node.type}, Scope: {node.scope}, Size: {node.size}")
-            self.function_inorder_traversal(node.right)
+    def display(self):
+        print("\nSymbol Table:")
+        for name, attributes in self.symbols.items():
+            print(f"{name} -> {attributes}")
     
-    def function_pointer_inorder_traversal(self, node=None):
-        if node is None:
-            node = self.function_table
-        if node:
-            self.function_pointer_inorder_traversal(node.left)
-            print(f"Name: {node.name}, Type: {node.type}, Offset: {node.offset}")
-            self.function_pointer_inorder_traversal(node.right)
+# test case
+"""
+int x ; 
+int add ( int a , int b ){
+    int sum = a + b ;
+    return sum ;
+}
+"""
 
 # Example usage
 if __name__ == "__main__":
     sym_table = SymbolTable()
-    sym_table.insert("x", "double", None, 2, 8) 
-    sym_table.insert("y", "int", None, 2, 4)
-    sym_table.insert("z", "char", None, 2, 1)
-    sym_table.insert_function("int",1 ,sym_table.insert_function_symbol("c", "int", None, 2, 4) ,sym_table.insert_function_symbol("b", "double", None, 2, 8) )
+    sym_table.insert("x", "int", "NULL", 2, 4)
+    param1 = sym_table.insert_function_symbol("a", "int", "NULL", 2, 4)
+    param2 = sym_table.insert_function_symbol("b", "int", "NULL", 2, 4)
+    return_var = sym_table.insert_function_symbol("sum", "int", "NULL", 2, 4)
+    func = sym_table.insert_function("int", 2, [param1, param2], return_var)
+    sym_table.insert("add", "funct", func, 1, None)
     
-    sym_table.inorder_traversal()
-    print(sym_table.search("x").size)
+    print(sym_table.search("x").type)

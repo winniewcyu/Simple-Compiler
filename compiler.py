@@ -1,4 +1,4 @@
-from token import tokenize
+from lexical import tokenize
 from parsing import parse_file
 
 if __name__ == "__main__":
