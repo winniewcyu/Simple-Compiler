@@ -453,10 +453,11 @@ class Parser:
     # AFASS_ST -> id = EP
     # recursive descent
     def afass_st(self):
-        if self.match("id") and self.match("=") and self.ep():
-            
-            return True
-        
+        if self.match("id"):
+            self.push(self.tokens[self.current-1][0])
+            if self.match("=") and self.ep():
+                self.geq_equal()
+                return True
         return False
        
 
@@ -573,7 +574,6 @@ class Parser:
             if self.logc_ep():
                 self.geq_not()
                 return True
-            
             return False
         self.current = tmp # reset
         return False
@@ -586,7 +586,6 @@ class Parser:
         if self.match("("):
             if self.logc_ep() and self.match(")"): # parenthesis for case of inner comparison
                 return True
-            
             return False
         self.current = tmp # reset
         if self.logc_term():
@@ -608,7 +607,6 @@ class Parser:
                     return True
             return False
         self.current = tmp # reset
-        
         return False
 
     # bool LOGC_TERM()
