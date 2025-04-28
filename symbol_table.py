@@ -88,19 +88,79 @@ class SymbolTable:
     
     def insert_type_pointer(self, name, type_, type_pointer, offset):
         new_node = TypePointerNode(name, type_, type_pointer, offset)
-        return new_node
+        if self.type_table is None:
+            self.type_table = new_node
+            return new_node
+        current = self.type_table
+        while True:
+            if name < current.name:  # Insert left
+                if current.left is None:
+                    current.left = new_node
+                    return new_node
+                current = current.left
+            else:  # Insert right
+                if current.right is None:
+                    current.right = new_node
+                    return new_node
+                current = current.right
+        # return new_node
 
     def insert_array(self, type_, type_pointer, length, size):
         new_node = ArraryTableNode(type_, type_pointer, length, size)
-        return new_node
+        if self.array_table is None:
+            self.array_table = new_node
+            return new_node
+        current = self.array_table
+        while True:
+            if length < current.length:  # Insert left
+                if current.left is None:
+                    current.left = new_node
+                    return new_node
+                current = current.left
+            else:  # Insert right
+                if current.right is None:
+                    current.right = new_node
+                    return new_node
+                current = current.right
+        # return new_node
                 
     def insert_function(self, return_type, params_num, params_pointer, local_var):
         new_node = FunctionTableNode(return_type, params_num, params_pointer, local_var)
-        return new_node
+        if self.function_table is None:
+            self.function_table = new_node
+            return new_node
+        current = self.function_table
+        while True:
+            if params_num < current.params_num:  # Insert left
+                if current.left is None:
+                    current.left = new_node
+                    return new_node
+                current = current.left
+            else:  # Insert right
+                if current.right is None:
+                    current.right = new_node
+                    return new_node
+                current = current.right
+        # return new_node
 
     def insert_function_symbol(self, name, type_, type_pointer, scope, size):
         new_node = FunctionSymbolTableNode(name, type_, type_pointer, scope, size)
-        return new_node
+        if self.function_symbol_table is None:
+            self.function_symbol_table = new_node
+            return new_node
+        current = self.function_symbol_table
+        while True:
+            if name < current.name:  # Insert left
+                if current.left is None:
+                    current.left = new_node
+                    return new_node
+                current = current.left
+            else:  # Insert right
+                if current.right is None:
+                    current.right = new_node
+                    return new_node
+                current = current.right
+        # return new_node
     
     def search(self, name):
         current = self.root

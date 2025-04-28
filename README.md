@@ -10,7 +10,7 @@ This project is to construct compiler in any programming language without using 
 |  ----  | ----  | ---- |
 | [Part 1: Lexical Analysis](#part-1-lexical-analysis) | 1.1 | fulfilling basic token identification, not yet handling real number and signed number(TODO) |
 | [Part 2: Parsing](#part-2-parsing) | 1.0 | can solve it more elegantly with checking everytime whether next token exists or not |
-| [Part 3: Semantic Analysis](#part-3-semantic-analysis) | - | - |
+| [Part 3: Semantic Analysis](#part-3-semantic-analysis) | 1.0 | just build symbol table and check for math operation and comparison operation, not yet check for ass_st, afass_st and return_st |
 
 ---
 
@@ -443,3 +443,11 @@ Parsing failed, Rejected.
 ---
 
 ## Part 3: Semantic Analysis
+
+Implement symbol table:
+
+1. insert to construct symbol table
+
+2. check math operation and comparison operation with retrieve
+
+Convert to intermediate code after verifying 

@@ -49,9 +49,12 @@ class Parser:
             print(f"Failed to parse START: no EX_DECLA found at {self.current} position")
             return False
         print("Passed: EX_DECLA")
-        if self.peek() and self.start():
-            print("Passed: START")
-            return True
+        if self.peek():
+            if self.start():
+                print("Passed: START")
+                return True
+            print(f"Failed to parse START: no valid EX_DECLA found at {self.current} position")
+            return False
         return True
         
     # bool EX_DECLA()
@@ -90,10 +93,9 @@ class Parser:
         if not token:
             print(f"Failed to parse FUNC_DEF: no token found at {self.current} position")
             return False
-        print(f"debug func_def: {token[0]}")
         if token[0] == "main":
             if self.match("main") and self.match("(") and self.match(")") and self.match("{") and self.block_st(inner_var_list, return_var_list) and self.match("}"):
-                function = self.sym_table.insert_function(type_, len(inner_var_list), inner_var_list , return_var_list )
+                function = self.sym_table.insert_function(type_, len(inner_var_list), return_var_list, inner_var_list )
                 self.sym_table.insert("main", "funct", function, self.scope, None)
                 print(f"insert function: {type_}, {len(inner_var_list)}, {inner_var_list}, {return_var_list}")
                 print(f"insert main function: {self.scope}")
@@ -102,7 +104,7 @@ class Parser:
         elif self.match("id"):
             func_name = self.tokens[self.current-1][0]
             if self.match("(") and self.param_list() and self.match(")") and self.match("{") and self.block_st(inner_var_list, return_var_list) and self.match("}"):
-                function = self.sym_table.insert_function(type_, len(inner_var_list), inner_var_list, return_var_list)
+                function = self.sym_table.insert_function(type_, len(inner_var_list), return_var_list, inner_var_list)
                 self.sym_table.insert(func_name, "funct", function, self.scope, None)
                 print(f"insert function: {type_}, {len(inner_var_list)}, {inner_var_list}, {return_var_list}")
                 print(f"insert {func_name} function: {self.scope}")
@@ -331,9 +333,12 @@ class Parser:
     # FOR_ST -> for (ASS_ST LOGC_EP; AFASS_ST){BLOCK_ST} 
     # recursive descent
     def for_st(self, inner_var_list, return_var_list):
-        if self.match("for") and self.match("(") and self.ass_st() and self.logc_ep() and self.match(";") and self.afass_st() and self.match(")") and self.match("{") and self.block_st(inner_var_list, return_var_list) and self.match("}"):
-            print("Passed: for (ASS_ST LOGC_EP; ASS_ST){BLOCK_ST}")
-            return True
+        if self.match("for") and self.match("(") and self.ass_st():
+            if self.logc_ep() and self.match(";") and self.afass_st() and self.match(")") and self.match("{") and self.block_st(inner_var_list, return_var_list) and self.match("}"):
+                print("Passed: for (ASS_ST LOGC_EP; ASS_ST){BLOCK_ST}")
+                return True
+            print(f"Failed to parse FOR_ST without matching logc_ep at {self.current} position")
+            return False
         print(f"Failed to parse FOR_ST at {self.current} position")
         return False
 
@@ -365,6 +370,7 @@ class Parser:
         tmp = self.current
         if self.match("str"):
             print("Passed: str")
+            id_list.append("char")
             return True
         self.current = tmp # reset
         if self.math_ep():
@@ -383,24 +389,30 @@ class Parser:
     # recursive descent
     def math_ep(self):
         id_list = []
+        var1 = None
         if not self.td(id_list):
             print(f"Failed to parse MATH_EP at {self.current} position")
             return False
-        for var_name, var_type in id_list:
-            if var_type not in ["int", "double"]:
-                print(f"Semantic Error: {var_name} is not a number, but is {var_type}")
-                return False
+        if not id_list or any(var_type not in ["int", "double"] for var_type in id_list):
+            print(f"Semantic Error: Non-numeric type found in MATH_EP at position {self.current}")
+            return False
+        var1 = id_list[0]
         print("Passed: TD")
         if self.peek() and self.peek()[0] in [",", ")", ";"]:
             return True
         while self.op1():
+            id_list = []
             if not self.td(id_list):
                 print(f"Failed to parse MATH_EP at {self.current} position")
                 return False
-            for var_name, var_type in id_list:
-                if var_type not in ["int", "double"]:
-                    print(f"Semantic Error: {var_name} is not a number, but is {var_type}")
-                    return False
+            if not id_list or any(var_type not in ["int", "double"] for var_type in id_list):
+                print(f"Semantic Error: Non-numeric type found in MATH_EP at position {self.current}")
+                return False
+            var2 = id_list[0]  # Second operand type
+            if var1 != var2:
+                print(f"Semantic Error: {var1} cannot be + or - with {var2}")
+                return False
+            id_list = [var1]
             print("Passed: TD op1 MATH_EP")
         if self.peek() and self.peek()[0] in [",", ")", ";"]:
             return True
@@ -409,22 +421,28 @@ class Parser:
     # TD ->TERM | TERM op2 TD
     # recursive descent
     def td(self, id_list):
+        var1 = None
         if not self.term(id_list):
             print(f"Failed to parse TD at {self.current} position")
             return False
-        for var_name, var_type in id_list:
-            if var_type not in ["int", "double"]:
-                print(f"Semantic Error: {var_name} is not a number, but is {var_type}")
-                return False
+        if not id_list or any(var_type not in ["int", "double"] for var_type in id_list):
+            print(f"Semantic Error: Non-numeric type found in TD at position {self.current}")
+            return False
+        var1 = id_list[0]
         print("Passed: TERM")
         while self.op2():
+            id_list = []
             if not self.term(id_list):
                 print(f"Failed to parse TD at {self.current} position")
                 return False
-            for var_name, var_type in id_list:
-                if var_type not in ["int", "double"]:
-                    print(f"Semantic Error: {var_name} is not a number, but is {var_type}")
-                    return False
+            if not id_list or any(var_type not in ["int", "double"] for var_type in id_list):
+                print(f"Semantic Error: Non-numeric type found in TD at position {self.current}")
+                return False
+            var2 = id_list[0]  # Second operand type
+            if var1 != var2:
+                print(f"Semantic Error: {var1} cannot be * or / with {var2}")
+                return False
+            id_list = [var1]
             print("Passed: TERM op2 TD")
         return True
 
@@ -435,24 +453,26 @@ class Parser:
         tmp = self.current
         if self.match("id"):
             id_name = self.tokens[self.current - 1][0]
-            id_type = self.sym_table.search_function_symbol(id_name)
-            if not id_type:
+            id_node = self.sym_table.search_function_symbol(id_name)
+            if not id_node:
                 print(f"Failed to retrieve type from function symbol table for {id_name} at {self.current} position")
-                id_type = self.sym_table.search(id_name)
-                if not id_type:
+                id_node = self.sym_table.search(id_name)
+                if not id_node:
                     print(f"Failed to retrieve type from symbol table for {id_name} at {self.current} position")
                     return False
-            id_list.append((id_name, id_type.type))
-            print(f"Retrieved id type: {id_type} for {id_name} at {self.current} position")
+            id_list.append(id_node.type)
+            print(f"Retrieved id type: {id_node.type} for {id_name} at {self.current} position")
             print("Passed: id")
             return True
         self.current = tmp # reset
         if self.match("intc"):
             print("Passed: intc")
+            id_list.append("int")
             return True
         self.current = tmp # reset
         if self.match("real"):
             print("Passed: real")
+            id_list.append("double")
             return True
         self.current = tmp # reset
         if self.match("(") and self.math_ep() and self.match(")"):
@@ -467,13 +487,14 @@ class Parser:
     def logc_ep(self):
         id_list = []
         tmp = self.current
-        if self.logc_st(id_list) and self.op3() and self.logc_st(id_list):
-            print("Passed: LOGC_ST op3 LOGC_ST")
-            if self.peek() and self.peek()[0] in [",", ")", ";"]:
-                return True
-            else:
-                print(f"Failed to parse LOGC_EP: no after set ',' or ')' or ';' found after LOGC_ST op3 LOGC_ST at {self.current} position")
-                return False
+        if self.logc_st(id_list):
+            if self.op3() and self.logc_st(id_list):
+                print("Passed: LOGC_ST op3 LOGC_ST")
+                if self.peek() and self.peek()[0] in [",", ")", ";"]:
+                    return True
+                else:
+                    print(f"Failed to parse LOGC_EP: no after set ',' or ')' or ';' found after LOGC_ST op3 LOGC_ST at {self.current} position")
+                    return False
         self.current = tmp # reset
         if self.match("!"):
             if self.logc_ep():
@@ -497,6 +518,7 @@ class Parser:
     # LOGC_ST -> (LOGC_EP) | LOGC_TERM op4 LOGC_TERM
     # recursive descent
     def logc_st(self, id_list):
+        var1 = None
         tmp = self.current
         if self.match("("):
             if self.logc_ep() and self.match(")"): # parenthesis for case of inner comparison
@@ -506,9 +528,24 @@ class Parser:
             return False
         self.current = tmp # reset
         if self.logc_term(id_list):
-            if self.op4() and self.logc_term(id_list): # comparison
-                print("Passed: LOGC_TERM op4 LOGC_TERM")
-                return True
+            var1 = id_list[0]
+            if not var1 in ["int", "double", "char"]:
+                print(f"Semantic Error: error in type {var1} at position {self.current}")
+                return False
+            id_list = []
+            if self.op4():
+                op = self.tokens[self.current - 1][0]
+                if var1 is "char":
+                    if op in ["<", "<=", ">", ">="]:
+                        print(f"Semantic Error: {var1} cannot be < or <= or > or >=")
+                        return False
+                if self.logc_term(id_list): # comparison
+                    if var1 != id_list[0]:
+                        print(f"Semantic Error: {var1} cannot be == or != or < or <= or > or >= with {id_list[0]}")
+                        return False
+                    id_list = [var1]
+                    print("Passed: LOGC_TERM op4 LOGC_TERM")
+                    return True
             print(f"Failed to parse LOGC_ST: no LOGC_TERM found after op4 at {self.current} position")
             return False
         self.current = tmp # reset
@@ -525,6 +562,7 @@ class Parser:
             return True
         self.current = tmp # reset
         if self.match("str"):
+            id_list.append("char")
             print("Passed: str(logc_term)")
             return True
         self.current = tmp # reset
@@ -607,5 +645,7 @@ def parse_file(input_file):
     start_parsing = parser.start()
     if start_parsing == True:
         print("Parsing successful, Accepted.")
+        return True
     else:
         print("Parsing failed, Rejected.")
+        return False
